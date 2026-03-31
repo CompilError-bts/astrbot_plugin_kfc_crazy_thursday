@@ -5,6 +5,6 @@ help: |
   以秦始皇口吻随机回复一条趣味话术，同时拦截LLM响应。
   可选开启API在线文案模式（50%概率从vme.im获取文案）。
   配置项可在WebUI插件设置中修改。
-version: v1.2.0
+version: v1.3.0
 author: Compilerror
 repo: https://github.com/CompilError-bts/astrbot_plugin_kfc_crazy_thursday

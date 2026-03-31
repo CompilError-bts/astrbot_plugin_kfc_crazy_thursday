@@ -1,6 +1,7 @@
 import re
 import time
 import random
+import asyncio
 import urllib.request
 from datetime import datetime
 
@@ -40,26 +41,61 @@ CRAZY_THURSDAY_REGEX_STR = (
     r"v我.*50|转.*50.*块|打.*50)"
 )
 
-# API 文案来源
 API_URL = "https://vme.im/api/random?format=text"
 
+# API 返回文本最大长度限制
+MAX_RESPONSE_LENGTH = 500
 
-def _fetch_api_copy() -> str:
-    """从 vme.im API 获取随机疯狂星期四文案"""
+# 同步 HTTP 请求函数（将在线程池中执行，避免阻塞事件循环）
+def _do_fetch_api_copy() -> str:
     try:
         req = urllib.request.Request(API_URL, headers={
             "User-Agent": "Mozilla/5.0 AstrBot/1.0",
             "Accept": "text/plain",
         })
         with urllib.request.urlopen(req, timeout=5) as resp:
-            text = resp.read().decode("utf-8", errors="replace")
-            return text.strip()
+            text = resp.read().decode("utf-8", errors="replace").strip()
+            return text
     except Exception as e:
         logger.warning(f"[疯狂星期四] API 获取文案失败: {e}")
         return ""
 
 
-@register("kfc_crazy_thursday", "Compilerror", "疯狂星期四秦始皇马甲回复", "1.2.0")
+def _sanitize_text(text: str, max_length: int = MAX_RESPONSE_LENGTH) -> str:
+    """对 API 返回文本进行安全过滤：长度截断 + 控制字符清理"""
+    if not text:
+        return ""
+    # 移除控制字符（保留换行和制表符）
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    # 截断过长文本
+    if len(text) > max_length:
+        text = text[:max_length].rstrip() + "..."
+    return text
+
+
+def _parse_bool(value) -> bool:
+    """安全的布尔值解析，兼容字符串/布尔/数值等类型"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes", "on")
+    return False
+
+
+def _parse_list(raw) -> list[str]:
+    """安全的列表解析，兼容字符串和列表类型"""
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    if isinstance(raw, str):
+        if not raw.strip():
+            return []
+        return [item.strip() for item in re.split(r'[;；,\n，]', raw) if item.strip()]
+    return []
+
+
+@register("kfc_crazy_thursday", "Compilerror", "疯狂星期四秦始皇马甲回复", "1.3.0")
 class KFCCrazyThursdayPlugin(Star):
     """检测UMO白名单会话的疯狂星期四话术，以秦始皇口吻随机回复。"""
 
@@ -68,13 +104,8 @@ class KFCCrazyThursdayPlugin(Star):
         self.config = config if config else {}
         self._cooldowns: dict[str, float] = {}
 
-    def _parse_list(self, raw: str) -> list[str]:
-        if not raw or not raw.strip():
-            return []
-        return [item.strip() for item in re.split(r'[;；,\n，]', raw) if item.strip()]
-
     def _get_whitelist(self) -> list[str]:
-        return self._parse_list(self.config.get("whitelist", ""))
+        return _parse_list(self.config.get("whitelist", ""))
 
     def _get_cooldown(self) -> int:
         try:
@@ -83,28 +114,33 @@ class KFCCrazyThursdayPlugin(Star):
             return 120
 
     def _is_only_thursday(self) -> bool:
-        return bool(self.config.get("only_thursday", False))
+        return _parse_bool(self.config.get("only_thursday", False))
 
     def _is_api_enabled(self) -> bool:
-        return bool(self.config.get("enable_api", False))
+        return _parse_bool(self.config.get("enable_api", False))
 
-    def _is_cooldown_ok(self, sender_id: str) -> bool:
+    def _is_cooldown_ok(self, cooldown_key: str) -> bool:
         cooldown = self._get_cooldown()
         if cooldown <= 0:
             return True
         now = time.time()
-        if now - self._cooldowns.get(sender_id, 0) >= cooldown:
-            self._cooldowns[sender_id] = now
+        if now - self._cooldowns.get(cooldown_key, 0) >= cooldown:
+            self._cooldowns[cooldown_key] = now
             return True
         return False
 
     def _is_thursday(self) -> bool:
         return datetime.now().weekday() == 3
 
-    def _get_response(self) -> str:
-        """获取回复文案。启用API时50%概率调API，否则全部使用秦始皇马甲话术。"""
+    async def _fetch_api_copy_async(self) -> str:
+        """在线程池中执行同步 HTTP 请求，避免阻塞事件循环"""
+        text = await asyncio.to_thread(_do_fetch_api_copy)
+        return _sanitize_text(text)
+
+    async def _get_response(self) -> str:
+        """获取回复文案"""
         if self._is_api_enabled() and random.random() < 0.5:
-            api_text = _fetch_api_copy()
+            api_text = await self._fetch_api_copy_async()
             if api_text:
                 logger.debug("[疯狂星期四] 使用 API 在线文案")
                 return api_text
@@ -136,10 +172,12 @@ class KFCCrazyThursdayPlugin(Star):
                 logger.debug(f"[疯狂星期四] 未命中白名单，跳过 (umo={umo})")
                 return
 
-            if not self._is_cooldown_ok(sender_id):
+            # 按 (umo, sender_id) 组合做冷却，避免跨会话互相影响
+            cooldown_key = f"{umo}:{sender_id}"
+            if not self._is_cooldown_ok(cooldown_key):
                 return
 
-            response = self._get_response()
+            response = await self._get_response()
             event.should_call_llm(False)
             event.stop_event()
 
