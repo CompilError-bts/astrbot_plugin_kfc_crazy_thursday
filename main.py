@@ -47,7 +47,11 @@ API_URL = "https://vme.im/api/random?format=text"
 def _fetch_api_copy() -> str:
     """从 vme.im API 获取随机疯狂星期四文案"""
     try:
-        with urllib.request.urlopen(API_URL, timeout=5) as resp:
+        req = urllib.request.Request(API_URL, headers={
+            "User-Agent": "Mozilla/5.0 AstrBot/1.0",
+            "Accept": "text/plain",
+        })
+        with urllib.request.urlopen(req, timeout=5) as resp:
             text = resp.read().decode("utf-8", errors="replace")
             return text.strip()
     except Exception as e:
@@ -55,9 +59,9 @@ def _fetch_api_copy() -> str:
         return ""
 
 
-@register("kfc_crazy_thursday", "Compilerror", "疯狂星期四秦始皇马甲回复", "1.1.0")
+@register("kfc_crazy_thursday", "Compilerror", "疯狂星期四秦始皇马甲回复", "1.2.0")
 class KFCCrazyThursdayPlugin(Star):
-    """检测UMO白名单会话的疯狂星期四话术，50%概率回复秦始皇马甲话术，50%概率回复API在线文案。"""
+    """检测UMO白名单会话的疯狂星期四话术，以秦始皇口吻随机回复。"""
 
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
@@ -81,6 +85,9 @@ class KFCCrazyThursdayPlugin(Star):
     def _is_only_thursday(self) -> bool:
         return bool(self.config.get("only_thursday", False))
 
+    def _is_api_enabled(self) -> bool:
+        return bool(self.config.get("enable_api", False))
+
     def _is_cooldown_ok(self, sender_id: str) -> bool:
         cooldown = self._get_cooldown()
         if cooldown <= 0:
@@ -95,19 +102,14 @@ class KFCCrazyThursdayPlugin(Star):
         return datetime.now().weekday() == 3
 
     def _get_response(self) -> str:
-        """50% 概率返回秦始皇马甲话术，50% 概率返回 API 在线文案"""
-        if random.random() < 0.5:
-            response = random.choice(QIN_RESPONSES)
-            logger.debug("[疯狂星期四] 使用秦始皇马甲话术")
-            return response
-        else:
+        """获取回复文案。启用API时50%概率调API，否则全部使用秦始皇马甲话术。"""
+        if self._is_api_enabled() and random.random() < 0.5:
             api_text = _fetch_api_copy()
             if api_text:
                 logger.debug("[疯狂星期四] 使用 API 在线文案")
                 return api_text
-            else:
-                logger.debug("[疯狂星期四] API 获取失败，回退到秦始皇马甲话术")
-                return random.choice(QIN_RESPONSES)
+            logger.debug("[疯狂星期四] API 获取失败，回退到秦始皇马甲话术")
+        return random.choice(QIN_RESPONSES)
 
     @filter.regex(CRAZY_THURSDAY_REGEX_STR)
     async def on_crazy_thursday(self, event: AstrMessageEvent):

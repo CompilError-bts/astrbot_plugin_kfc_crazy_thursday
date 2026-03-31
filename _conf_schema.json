@@ -5,6 +5,12 @@
     "hint": "填入会话的 UMO（统一消息来源标识），用英文分号隔开。群聊白名单示例: platform:GroupMessage:xxxxxxx私聊白名单示例: platform:FriendMessage:xxxxxxxUMO 可在 AstrBot 日志中查看 [疯狂星期四] 开头的调试信息。",
     "default": ""
   },
+  "enable_api": {
+    "description": "启用 API 在线文案",
+    "type": "bool",
+    "hint": "开启后将有50%概率从vme.im获取在线疯狂星期四文案，另外50%使用秦始皇马甲话术。关闭则全部使用秦始皇马甲话术。",
+    "default": false
+  },
   "cooldown_seconds": {
     "description": "同一用户触发冷却时间（秒）",
     "type": "int",
