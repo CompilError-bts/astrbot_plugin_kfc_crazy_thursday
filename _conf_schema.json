@@ -1,0 +1,20 @@
+{
+  "whitelist": {
+    "description": "UMO 白名单（分号隔开）",
+    "type": "string",
+    "hint": "填入会话的 UMO（统一消息来源标识），用英文分号隔开。群聊白名单示例: platform:GroupMessage:xxxxxxx私聊白名单示例: platform:FriendMessage:xxxxxxxUMO 可在 AstrBot 日志中查看 [疯狂星期四] 开头的调试信息。",
+    "default": ""
+  },
+  "cooldown_seconds": {
+    "description": "同一用户触发冷却时间（秒）",
+    "type": "int",
+    "hint": "防止刷屏，默认120秒内同一用户只回复一次，设为0则不限制",
+    "default": 120
+  },
+  "only_thursday": {
+    "description": "仅在星期四触发",
+    "type": "bool",
+    "hint": "开启后仅每周四触发回复，关闭则每天都可触发",
+    "default": false
+  }
+}
