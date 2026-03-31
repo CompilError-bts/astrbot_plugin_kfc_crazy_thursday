@@ -178,7 +178,7 @@ class KFCCrazyThursdayPlugin(Star):
                 return
 
             response = await self._get_response()
-            event.should_call_llm(False)
+            event.should_call_llm(True)
             event.stop_event()
 
             logger.info(f"[疯狂星期四] 已回复 {sender_name}({sender_id}) {umo}")
