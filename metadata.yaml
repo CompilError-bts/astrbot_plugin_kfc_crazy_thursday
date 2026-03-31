@@ -1,9 +1,9 @@
 name: astrbot_plugin_kfc_crazy_thursday
-desc: 疯狂星期四秦始皇马甲回复插件，检测UMO白名单会话中的疯狂星期四话术并自动以秦始皇口吻回复
+desc: 疯狂星期四秦始皇马甲回复插件，检测UMO白名单会话中的疯狂星期四话术并自动回复，支持API在线文案
 help: |
   监听消息，当UMO白名单内的会话出现"疯狂星期四""V我50"等关键词时，
-  自动以秦始皇口吻随机回复一条趣味话术，同时拦截LLM响应。
+  50%概率以秦始皇口吻随机回复，50%概率从API获取在线疯狂星期四文案回复，同时拦截LLM响应。
   配置项可在WebUI插件设置中修改。
-version: v1.0.0
+version: v1.1.0
 author: Compilerror
 repo: https://github.com/CompilError-bts/astrbot_plugin_kfc_crazy_thursday
