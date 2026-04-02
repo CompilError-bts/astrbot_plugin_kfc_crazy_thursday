@@ -36,7 +36,7 @@ QIN_RESPONSES = [
 # 疯狂星期四关键词匹配正则
 CRAZY_THURSDAY_REGEX_STR = (
     r"(疯狂星期四|v我50|V我50|v50|V50|微我50|微信转账50|转我50|"
-    r"肯德基.*星期四|星期四.*肯德基|KFC.*星期四|crazy.*thursday|"
+    r"肯德基|KFC|kfc|crazy.*thursday|"
     r"今天是星期四|又到星期四|过星期四|疯狂星期|星期四.*v我|"
     r"v我.*50|转.*50.*块|打.*50)"
 )
