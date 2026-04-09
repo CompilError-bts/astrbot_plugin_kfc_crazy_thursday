@@ -111,6 +111,21 @@ def _parse_list(raw) -> List[str]:
         return [item.strip() for item in re.split(r'[;；,，]', raw) if item.strip()]
     return []
 
+def _parse_blocked_ids(raw) -> set:
+    """解析黑名单 ID 配置，兼容 JSON 字符串和列表类型"""
+    if isinstance(raw, list):
+        return {str(item).strip() for item in raw if str(item).strip()}
+    if isinstance(raw, str):
+        try:
+            ids = json.loads(raw)
+            if isinstance(ids, list):
+                return {str(item).strip() for item in ids if str(item).strip()}
+        except (json.JSONDecodeError, TypeError):
+            pass
+        # 兼容分号/逗号分隔的纯文本
+        return {item.strip() for item in re.split(r'[;\uff1b,\n\uff0c]', raw) if item.strip()}
+    return set()
+
 
 @register("kfc_crazy_thursday", "Compilerror", "疯狂星期四秦始皇马甲回复", "1.4.0")
 class KFCCrazyThursdayPlugin(Star):
@@ -143,6 +158,11 @@ class KFCCrazyThursdayPlugin(Star):
             return max(0.0, min(1.0, weight))
         except (ValueError, TypeError):
             return 0.5
+
+
+    def _get_blocked_ids(self) -> set:
+        """获取 API 文案黑名单 ID 集合"""
+        return _parse_blocked_ids(self.config.get("blocked_ids", "[]"))
 
     def _cleanup_expired_cooldowns(self):
         """清理过期的冷却条目"""
@@ -188,21 +208,33 @@ class KFCCrazyThursdayPlugin(Star):
         """在线程池中执行同步 HTTP 请求，避免阻塞事件循环"""
         return await asyncio.to_thread(_do_fetch_api_json)
 
-    async def _get_response(self) -> Tuple[str, List[str]]:
+    async def _get_response(self, max_retries: int = 3) -> Tuple[str, List[str]]:
         """
         获取回复内容
         返回: (文本内容, 图片URL列表)
+        命中黑名单时自动重试，超过最大重试次数则回退到秦始皇话术
         """
         if self._is_api_enabled() and random.random() < self._get_api_weight():
-            api_data = await self._fetch_api_json_async()
-            if api_data:
+            blocked_ids = self._get_blocked_ids()
+            
+            for attempt in range(max_retries):
+                api_data = await self._fetch_api_json_async()
+                if not api_data:
+                    break
+                
+                item_id = api_data.get("id", "")
                 body = api_data.get("body", "")
+                
+                # 黑名单过滤
+                if item_id and item_id in blocked_ids:
+                    logger.debug(f"[疯狂星期四] 文案 {item_id} 在黑名单中，跳过 (第{attempt+1}次)")
+                    continue
+                
                 if body:
                     # 提取图片
                     images = _extract_images_from_body(body)
                     if images:
                         logger.debug(f"[疯狂星期四] API 返回包含 {len(images)} 张图片")
-                        # 清理 body 中的图片标记
                         text = re.sub(IMAGE_PATTERN, '', body).strip()
                         text = _sanitize_text(text)
                         return text, images
@@ -213,7 +245,7 @@ class KFCCrazyThursdayPlugin(Star):
                         logger.debug("[疯狂星期四] 使用 API 在线文案")
                         return text, []
             
-            logger.debug("[疯狂星期四] API 获取失败，回退到秦始皇马甲话术")
+            logger.debug("[疯狂星期四] API 获取失败或全部命中黑名单，回退到秦始皇马甲话术")
         
         # 使用秦始皇话术
         return random.choice(QIN_RESPONSES), []

@@ -28,5 +28,11 @@
     "type": "float",
     "hint": "启用 API 时，调用 API 的概率权重。0.0 表示从不调用 API，1.0 表示总是调用 API，0.5 表示 50% 概率。",
     "default": 0.5
+  },
+  "blocked_ids": {
+    "description": "API 文案黑名单 ID（JSON 数组）",
+    "type": "string",
+    "hint": "填入要屏蔽的 API 文案 ID，JSON 数组格式。例如: [\"I_kwDOHp_P8c5g8Zgo\"]，多个用逗号分隔。命中黑名单的文案将被跳过并重新请求。",
+    "default": "[\"I_kwDOHp_P8c5g8Zgo\",\"I_kwDOHp_P8c5OVhTh\"]"
   }
 }
