@@ -8,7 +8,7 @@
   "enable_api": {
     "description": "启用 API 在线文案",
     "type": "bool",
-    "hint": "开启后将有50%概率从vme.im获取在线疯狂星期四文案，另外50%使用秦始皇马甲话术。关闭则全部使用秦始皇马甲话术。",
+    "hint": "开启后将根据 api_weight 设置的概率从 vme.im 获取在线疯狂星期四文案，否则使用秦始皇马甲话术。",
     "default": false
   },
   "cooldown_seconds": {
@@ -22,5 +22,11 @@
     "type": "bool",
     "hint": "开启后仅每周四触发回复，关闭则每天都可触发",
     "default": false
+  },
+  "api_weight": {
+    "description": "API 调用权重（0.0-1.0）",
+    "type": "float",
+    "hint": "启用 API 时，调用 API 的概率权重。0.0 表示从不调用 API，1.0 表示总是调用 API，0.5 表示 50% 概率。",
+    "default": 0.5
   }
 }
