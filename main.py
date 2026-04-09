@@ -76,7 +76,7 @@ def _sanitize_text(text: str, max_length: int = MAX_RESPONSE_LENGTH) -> str:
     if not text:
         return ""
     # 移除控制字符（保留换行和制表符）
-    text = re.sub(r'[--]', '', text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
     # 截断过长文本
     if len(text) > max_length:
         text = text[:max_length].rstrip() + "..."
@@ -254,7 +254,7 @@ class KFCCrazyThursdayPlugin(Star):
             text, images = await self._get_response()
             
             # 拦截 LLM 处理
-            event.should_call_llm(True)
+            event.should_call_llm(False)
             event.stop_event()
 
             logger.info(f"[疯狂星期四] 已回复 {sender_name}({sender_id}) {umo}")
