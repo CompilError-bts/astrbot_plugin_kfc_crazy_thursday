@@ -46,7 +46,7 @@ CRAZY_THURSDAY_REGEX_STR = (
 API_URL = "https://vme.im/api/random"
 
 # API 返回文本最大长度限制
-MAX_RESPONSE_LENGTH = 500
+MAX_RESPONSE_LENGTH = 2000
 
 # 图片检测正则
 IMAGE_PATTERN = r'!\[[^\]]*\]\(([^)]+)\)'
